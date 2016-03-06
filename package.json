@@ -1,0 +1,8 @@
+{
+  "name": "purescript-socket.io-chat-server",
+  "dependencies": {
+    "socket.io": "^1.4.5"
+  },
+  "author": "Lauri Piispanen",
+  "license": "ISC"
+}

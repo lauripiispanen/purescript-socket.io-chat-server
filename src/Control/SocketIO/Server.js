@@ -2,6 +2,7 @@
 
 // module Control.SocketIO.Server
 var io = require('socket.io')
+var Rx = require('rx')
 
 
 exports.listen = function listen(port) {
@@ -40,4 +41,39 @@ exports.emit = function(socket) {
       }
     }
   }
+}
+
+exports.connections = function(server) {
+  return Rx.Observable.create(function(observer) {
+    server.on('connect', function(socket) {
+      observer.onNext(socket)
+    })
+  })
+}
+
+exports.messages = function(socket) {
+  return Rx.Observable.create(function(observer) {
+    socket.on('msg', function(msg) {
+      observer.onNext({
+        conn: socket,
+        msg: msg
+      })
+    })
+    socket.on('disconnect', function() {
+      observer.onCompleted()
+    })
+  })
+}
+
+exports.disconnect = function(socket) {
+  return Rx.Observable.create(function(observer) {
+    socket.on('disconnect', function() {
+      observer.onNext(socket)
+      observer.onCompleted()
+    })
+  })
+}
+
+exports.connectionId = function(connection) {
+  return connection.id
 }

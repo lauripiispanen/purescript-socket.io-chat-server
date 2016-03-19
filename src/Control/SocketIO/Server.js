@@ -11,25 +11,19 @@ exports.listen = function listen(port) {
   };
 }
 
-exports.onConnection = function(server) {
-  return function(onConnection) {
-    return function() {
-      server.on('connect', function(socket) {
-        onConnection(socket)()
-      })
-    }
-  }
-}
-
-exports.on = function(socket) {
-  return function(event) {
-    return function(onEvent) {
-      return function() {
-        socket.on(event, function(data) {
-          onEvent(data)()
+exports.on = function(event) {
+  return function(socket) {
+    return Rx.Observable.create(function(observer) {
+      socket.on(event, function(e) {
+        observer.onNext({
+          connection: socket,
+          payload: e
         })
-      }
-    }
+      })
+      socket.on('disconnect', function() {
+        observer.onCompleted()
+      })
+    })
   }
 }
 
@@ -47,20 +41,6 @@ exports.connections = function(server) {
   return Rx.Observable.create(function(observer) {
     server.on('connect', function(socket) {
       observer.onNext(socket)
-    })
-  })
-}
-
-exports.messages = function(socket) {
-  return Rx.Observable.create(function(observer) {
-    socket.on('msg', function(msg) {
-      observer.onNext({
-        conn: socket,
-        msg: msg
-      })
-    })
-    socket.on('disconnect', function() {
-      observer.onCompleted()
     })
   })
 }

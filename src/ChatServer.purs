@@ -11,15 +11,14 @@ import Data.Foreign (ForeignError, readString)
 
 type User = { name :: String, connection :: Connection }
 
-data ConnectionOutcome = Connected | Disconnected
-type ConnectionAction = { outcome :: ConnectionOutcome, user :: User }
+data ConnectionOutcome u = Connected User | Disconnected User
 
 users :: Server -> Observable (Array User)
 users server =
   let
     joinedUsers = joins (connections server)
-    connects = map (toAction Connected) joinedUsers
-    disconnects = map (toAction Disconnected) (flatMap joinedUsers userDisconnect)
+    connects = map Connected joinedUsers
+    disconnects = map Disconnected (flatMap joinedUsers userDisconnect)
   in
     scan toUserArray [] (merge connects disconnects)
 
@@ -47,17 +46,9 @@ toUser :: Connection -> String -> Observable User
 toUser c s =
   fromArray [{ name : s, connection: c }]
 
-toAction :: ConnectionOutcome -> User -> ConnectionAction
-toAction o u =
-  { outcome : o, user : u }
-
-toUserArray :: ConnectionAction -> Array User -> Array User
-toUserArray a s =
-  let
-    nextState { outcome = Connected, user = u } = u : s
-    nextState { outcome = Disconnected, user = u } = filter (not (connectionEquals u)) s
-  in
-    nextState a
+toUserArray :: (ConnectionOutcome User) -> Array User -> Array User
+toUserArray (Connected u) a = u : a
+toUserArray (Disconnected u) a = filter (not (connectionEquals u)) a
 
 connectionEquals :: User -> User -> Boolean
 connectionEquals a b
